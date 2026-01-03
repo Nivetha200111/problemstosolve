@@ -1,64 +1,79 @@
 """API endpoint: /api/cron/ingest - Scheduled ingestion."""
-from flask import Flask, request, jsonify
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+import json
 from core.database import get_db
 from core.ingestion import IngestionPipeline
 from core.config import settings
 from api.utils import error_response
 
-app = Flask(__name__)
 
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self._handle_request()
 
-@app.route("/api/cron/ingest", methods=["GET", "POST"])
-def cron_ingest():
-    """
-    Scheduled ingestion endpoint.
+    def do_POST(self):
+        self._handle_request()
 
-    Protected by CRON_SECRET in header or query param.
-    """
-    try:
-        # Authenticate
-        auth_header = request.headers.get("X-Cron-Secret")
-        auth_query = request.args.get("secret")
+    def _handle_request(self):
+        """
+        Scheduled ingestion endpoint.
 
-        provided_secret = auth_header or auth_query
+        Protected by CRON_SECRET in header or query param.
+        """
+        try:
+            # Parse query params for secret
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
 
-        if not provided_secret or provided_secret != settings.cron_secret:
-            return error_response("Unauthorized", 401)
+            # Authenticate
+            auth_header = self.headers.get("X-Cron-Secret")
+            auth_query = params.get("secret", [None])[0]
 
-        # Run ingestion
-        with get_db() as db:
-            pipeline = IngestionPipeline(db)
+            provided_secret = auth_header or auth_query
 
-            # Ingest from all sources with limit
-            max_items = settings.max_items_per_cron
-            all_stats = pipeline.ingest_all_sources(max_items_per_source=max_items)
+            if not provided_secret or provided_secret != settings.cron_secret:
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(error_response("Unauthorized", 401)).encode())
+                return
 
-        # Calculate totals
-        total_processed = sum(s["processed"] for s in all_stats)
-        total_inserted = sum(s["inserted"] for s in all_stats)
-        total_deduped = sum(s["deduped"] for s in all_stats)
-        total_errors = sum(len(s["errors"]) for s in all_stats)
+            # Run ingestion
+            with get_db() as db:
+                pipeline = IngestionPipeline(db)
 
-        response = {
-            "status": "success",
-            "summary": {
-                "total_processed": total_processed,
-                "total_inserted": total_inserted,
-                "total_deduped": total_deduped,
-                "total_errors": total_errors
-            },
-            "sources": all_stats
-        }
+                # Ingest from all sources with limit
+                max_items = settings.max_items_per_cron
+                all_stats = pipeline.ingest_all_sources(max_items_per_source=max_items)
 
-        return jsonify(response), 200
+            # Calculate totals
+            total_processed = sum(s["processed"] for s in all_stats)
+            total_inserted = sum(s["inserted"] for s in all_stats)
+            total_deduped = sum(s["deduped"] for s in all_stats)
+            total_errors = sum(len(s["errors"]) for s in all_stats)
 
-    except Exception as e:
-        print(f"Error in /api/cron/ingest: {e}")
-        return error_response(f"Internal server error: {str(e)}", 500)
+            response = {
+                "status": "success",
+                "summary": {
+                    "total_processed": total_processed,
+                    "total_inserted": total_inserted,
+                    "total_deduped": total_deduped,
+                    "total_errors": total_errors
+                },
+                "sources": all_stats
+            }
 
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response, default=str).encode())
 
-# Vercel serverless function handler
-def handler(request):
-    """Vercel handler."""
-    with app.request_context(request.environ):
-        return app.full_dispatch_request()
+        except Exception as e:
+            print(f"Error in /api/cron/ingest: {e}")
+            import traceback
+            traceback.print_exc()
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(error_response(f"Internal server error: {str(e)}", 500)).encode())
