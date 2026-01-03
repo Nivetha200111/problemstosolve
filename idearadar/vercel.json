@@ -1,24 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
+  "rewrites": [
+    { "source": "/api/feed", "destination": "/api/feed.py" },
+    { "source": "/api/item", "destination": "/api/item.py" },
+    { "source": "/api/search", "destination": "/api/search.py" },
+    { "source": "/api/cron/ingest", "destination": "/api/cron/ingest.py" }
   ],
   "crons": [
     {
