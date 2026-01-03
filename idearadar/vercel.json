@@ -25,9 +25,5 @@
       "path": "/api/cron/ingest",
       "schedule": "0 */2 * * *"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "CRON_SECRET": "@cron_secret"
-  }
+  ]
 }
