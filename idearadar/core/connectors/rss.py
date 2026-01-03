@@ -30,16 +30,24 @@ class RSSConnector(BaseConnector):
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-            feed = atoma.parse_rss_bytes(response.content)
+
+            # Try parsing as both RSS and Atom
+            try:
+                feed = atoma.parse_rss_bytes(response.content)
+            except:
+                feed = atoma.parse_atom_bytes(response.content)
         except Exception as e:
-            raise Exception(f"Failed to parse RSS feed: {e}")
+            raise Exception(f"Failed to parse RSS/Atom feed: {e}")
 
         items = []
         latest_ts = last_pub_ts
 
-        for entry in feed.items[:limit]:
-            # Parse published date
-            pub_date = entry.pub_date
+        # Get entries (works for both RSS and Atom)
+        entries = getattr(feed, 'items', getattr(feed, 'entries', []))
+
+        for entry in entries[:limit]:
+            # Parse published date (handle both RSS and Atom)
+            pub_date = getattr(entry, 'pub_date', getattr(entry, 'published', getattr(entry, 'updated', None)))
             pub_ts = pub_date.timestamp() if pub_date else 0.0
 
             # Skip if older than cursor
@@ -50,26 +58,39 @@ class RSSConnector(BaseConnector):
             if pub_ts > latest_ts:
                 latest_ts = pub_ts
 
-            # Extract snippet from description
+            # Extract snippet from description or content
             snippet = None
-            if entry.description:
-                snippet = entry.description[:500]  # Truncate
+            description = getattr(entry, 'description', None)
+            summary = getattr(entry, 'summary', None)
+            if description:
+                snippet = description[:500]
+            elif summary:
+                snippet = summary[:500]
 
-            # Get author
+            # Get author (handle different author formats)
             author = None
-            if entry.author:
-                author = entry.author
+            author_obj = getattr(entry, 'author', None)
+            if author_obj:
+                if isinstance(author_obj, str):
+                    author = author_obj
+                elif hasattr(author_obj, 'name'):
+                    author = author_obj.name
+
+            # Get link (handle different link formats)
+            link = getattr(entry, 'link', None)
+            if hasattr(link, 'href'):
+                link = link.href
 
             raw_item = RawItem(
-                title=entry.title or "Untitled",
-                url=entry.link or "",
+                title=getattr(entry, 'title', "Untitled") or "Untitled",
+                url=link or "",
                 published_at=pub_date,
                 author=author,
                 source=self.get_name(),
                 snippet=snippet,
                 raw_data={
-                    "feed_title": feed.title or "",
-                    "tags": [cat for cat in entry.categories] if entry.categories else []
+                    "feed_title": getattr(feed, 'title', "") or "",
+                    "tags": [cat for cat in getattr(entry, 'categories', [])] if hasattr(entry, 'categories') else []
                 }
             )
 

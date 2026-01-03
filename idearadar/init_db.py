@@ -30,66 +30,81 @@ def init_database():
 
 
 def seed_sources():
-    """Seed initial content sources."""
+    """Seed initial content sources focused on developer project ideas."""
     sources = [
         {
-            "name": "Hacker News Top Stories",
+            "name": "Hacker News Show HN",
             "type": "api",
             "config_json": {
                 "connector": "hackernews",
-                "endpoint": "topstories",
-                "limit": 30
+                "endpoint": "showstories",
+                "limit": 50
             },
             "enabled": True
         },
         {
-            "name": "arXiv CS.AI Recent",
-            "type": "api",
-            "config_json": {
-                "connector": "arxiv",
-                "search_query": "cat:cs.AI",
-                "max_results": 20,
-                "sort_by": "submittedDate",
-                "sort_order": "descending"
-            },
-            "enabled": True
-        },
-        {
-            "name": "arXiv CS.LG Recent",
-            "type": "api",
-            "config_json": {
-                "connector": "arxiv",
-                "search_query": "cat:cs.LG",
-                "max_results": 20,
-                "sort_by": "submittedDate",
-                "sort_order": "descending"
-            },
-            "enabled": True
-        },
-        {
-            "name": "TechCrunch RSS",
-            "type": "rss",
-            "config_json": {
-                "connector": "rss",
-                "url": "https://techcrunch.com/feed/"
-            },
-            "enabled": True
-        },
-        {
-            "name": "MIT News AI RSS",
-            "type": "rss",
-            "config_json": {
-                "connector": "rss",
-                "url": "https://news.mit.edu/rss/topic/artificial-intelligence2"
-            },
-            "enabled": True
-        },
-        {
-            "name": "Product Hunt RSS",
+            "name": "Product Hunt - New Products",
             "type": "rss",
             "config_json": {
                 "connector": "rss",
                 "url": "https://www.producthunt.com/feed"
+            },
+            "enabled": True
+        },
+        {
+            "name": "GitHub Trending Repositories",
+            "type": "rss",
+            "config_json": {
+                "connector": "rss",
+                "url": "https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml"
+            },
+            "enabled": True
+        },
+        {
+            "name": "Dev.to Top Posts",
+            "type": "rss",
+            "config_json": {
+                "connector": "rss",
+                "url": "https://dev.to/feed/top/week"
+            },
+            "enabled": True
+        },
+        {
+            "name": "Indie Hackers Projects",
+            "type": "rss",
+            "config_json": {
+                "connector": "rss",
+                "url": "https://www.indiehackers.com/feed.xml"
+            },
+            "enabled": True
+        },
+        {
+            "name": "Reddit r/SideProject",
+            "type": "rss",
+            "config_json": {
+                "connector": "rss",
+                "url": "https://www.reddit.com/r/SideProject/.rss"
+            },
+            "enabled": True
+        },
+        {
+            "name": "Reddit r/webdev Projects",
+            "type": "rss",
+            "config_json": {
+                "connector": "rss",
+                "url": "https://www.reddit.com/r/webdev/.rss"
+            },
+            "enabled": True
+        },
+        {
+            "name": "arXiv CS.SE (Software Engineering)",
+            "type": "api",
+            "config_json": {
+                "connector": "arxiv",
+                "search_query": "cat:cs.SE",
+                "max_results": 15,
+                "sort_by": "submittedDate",
+                "sort_order": "descending"
             },
             "enabled": True
         }
